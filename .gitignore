@@ -1,0 +1,3 @@
+# số liệu trung gian (đã nhúng sẵn trong index.html)
+*.json
+__pycache__/

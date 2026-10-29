@@ -7,14 +7,15 @@ from sqlalchemy import select
 from app import social  # noqa: F401
 from app.db import SessionLocal
 from app.social import Dealer, Product, SocialPage, SocialPost, product_matcher
-from social_report_rules import account_of, angle_of, classify
+from social_report_rules import account_of, angle_of, classify, excluded
 
 with SessionLocal() as db:
     pages = {p.id: p for p in db.scalars(select(SocialPage))}
     dealers = {d.id: d.name for d in db.scalars(select(Dealer))}
     match = product_matcher(db.scalars(select(Product)).all())
     rows = [p for p in db.scalars(select(SocialPost)) if p.published_at and not p.duplicate_of
-            and date(2026, 10, 7) <= p.published_at.date() <= date(2026, 10, 17)]
+            and date(2026, 10, 7) <= p.published_at.date() <= date(2026, 10, 17)
+            and not excluded(pages[p.page_id].name if p.page_id in pages else "")]
 
 
 def rate(ps):
@@ -40,8 +41,7 @@ for k in ("Roborock Saros 20 Flow Complete", "Roborock F25 Ultra Steam Gen 2", "
           "Roborock Qrevo Edge 2 Flow", "Roborock (chung)"):
     hits = [n for n in by_prod if n.startswith(k)]
     print(f"  {k[:30]:30}", rate([p for n in hits for p in by_prod[n]]))
-for k in ("BigMi", ("Danke", 'CM'), "H&T Smart Home", "CellphoneS", "Cường Phát"):
-    name = k if isinstance(k, str) else k[0]
+for name in ("BigMi", "H&T Smart Home", "CellphoneS", "Cường Phát"):
     print(f"  ACC {name:18}", rate([p for (a, g), ps in by_acc.items() if a == name for p in ps]))
 pub = defaultdict(int)
 for p in by_angle["Experience / event"]:

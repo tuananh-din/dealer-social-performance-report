@@ -11,9 +11,10 @@ from sqlalchemy import select
 from app import social  # noqa: F401
 from app.db import SessionLocal
 from app.social import Dealer, Product, SocialPage, SocialPost, product_matcher
-from social_report_rules import account_of, angle_of, classify
+from social_report_rules import account_of, angle_of, classify, excluded
 
 START, END = date(2026, 10, 7), date(2026, 10, 20)          # 2 tuần trọn vẹn (21/10 mới có nửa ngày)
+VN = timedelta(hours=7)                                      # updated_at lưu giờ UTC
 WEEKS = [("W1 · 07–13/10", date(2026, 10, 7), date(2026, 10, 13)), ("W2 · 14–20/10", date(2026, 10, 14), date(2026, 10, 20))]
 TOP_N = 12
 
@@ -52,8 +53,14 @@ def main(out_path):
         pages = {p.id: p for p in db.scalars(select(SocialPage))}
         dealers = {d.id: d.name for d in db.scalars(select(Dealer))}
         match = product_matcher(db.scalars(select(Product)).all())
-        rows = [p for p in db.scalars(select(SocialPost)) if p.published_at and not p.duplicate_of
-                and START <= p.published_at.date() <= END]
+        window = [p for p in db.scalars(select(SocialPost)) if p.published_at and not p.duplicate_of
+                  and START <= p.published_at.date() <= END]
+    page_name = lambda p: pages[p.page_id].name if p.page_id in pages else ""  # noqa: E731
+    rows = [p for p in window if not excluded(page_name(p))]
+    dropped = [p for p in window if excluded(page_name(p))]
+    pulled = [(p.updated_at + VN, p.published_at) for p in rows if p.updated_at]
+    main_day = Counter(u.date() for u, _ in pulled).most_common(1)[0][0]   # lần kéo phủ phần lớn bài
+    at_main = [(u, pub) for u, pub in pulled if u.date() == main_day]
     ctx = {}
     for p in rows:
         pg = pages.get(p.page_id)
@@ -101,6 +108,7 @@ def main(out_path):
     brands = [{"brand": b, **summ(ps)} for b, ps in by(lambda p: ctx[p.id]["brand"], floor_posts).items()]
     brands.sort(key=lambda a: -a["views"])
     rob_posts = [p for p in floor_posts if ctx[p.id]["brand"] == "Roborock"]
+    comp_posts = [p for p in floor_posts if ctx[p.id]["brand"] not in ("Roborock", "Unbranded / generic")]
     products = [{"product": k, **summ(ps)} for k, ps in by(lambda p: ctx[p.id]["product"], rob_posts).items()]
     products.sort(key=lambda a: -a["views"])
     types = [{"type": k or "?", **summ(ps)} for k, ps in by(lambda p: p.post_type, rows).items()]
@@ -109,13 +117,12 @@ def main(out_path):
     angles = [{"angle": k, **summ(ps)} for k, ps in by(lambda p: ctx[p.id]["angle"], rob_posts).items()]
     angles.sort(key=lambda a: -a["posts"])
     groups = [{"group": k, **summ(ps)} for k, ps in by(lambda p: ctx[p.id]["group"]).items()]
-    ex_danke = summ([p for p in rows if ctx[p.id]["account"] != "Danke"])
     rob_by_account = []
     for acc, ps in by(lambda p: ctx[p.id]["account"], rob_posts).items():
         rob_by_account.append({"account": acc, "group": ctx[ps[0].id]["group"], **summ(ps)})
     rob_by_account.sort(key=lambda a: -a["views"])
     data = {
-        "angles": angles, "groups": groups, "ex_danke": ex_danke, "roborock_by_account": rob_by_account,
+        "angles": angles, "groups": groups, "roborock_by_account": rob_by_account,
         "period": {"start": START.isoformat(), "end": END.isoformat(), "weeks": [w[0] for w in WEEKS],
                    "generated": datetime.now().strftime("%d/%m/%Y %H:%M")},
         "total": total, "weeks": weeks, "days": days, "accounts": accounts, "pages": page_rows,
@@ -125,8 +132,8 @@ def main(out_path):
         "top_roborock_da": top(rob_posts, lambda p: -(p.comments + p.shares)),
         "top_roborock_da_rate": top([p for p in rob_posts if p.views >= 1000], lambda p: -(p.comments + p.shares) / p.views),
         "top_all_views": top(rows, lambda p: -p.views),
-        "top_competitor": top([p for p in floor_posts if ctx[p.id]["brand"] not in ("Roborock", "Unbranded / generic")],
-                              lambda p: -p.views, 8),
+        "top_competitor": top(comp_posts, lambda p: -p.views, 8),
+        "competitor_accounts": [{"account": a, "posts": n} for a, n in Counter(ctx[p.id]["account"] for p in comp_posts).most_common()],
         "quality": {
             "posts_in_window": len(rows), "pages": len({p.page_id for p in rows}),
             "pages_with_dealer_in_app": sum(1 for p in pages.values() if p.dealer_id),
@@ -134,6 +141,12 @@ def main(out_path):
             "posts_zero_views": sum(1 for p in rows if not p.views),
             "views_split_mismatch": sum(1 for p in rows if p.views and p.views_organic + p.views_paid != p.views),
             "other_store_posts": sum(1 for p in rows if ctx[p.id]["category"] == "Other / store post"),
+            # số liệu bài là lũy kế tới lần kéo So9 gần nhất của bài đó: ngày kéo chính + số ngày tối thiểu bài đã có để tích view;
+            # bài So9 không còn trả (Page mất kết nối, bài bị xóa) giữ số lần kéo trước -> đếm riêng
+            "pulled": f"{main_day:%d %b}", "min_age_days": min((u - pub).days for u, pub in at_main),
+            "pulled_older_posts": len(pulled) - len(at_main),
+            "excluded_pages": [{"page": n, "posts": len(ps), "views": sum(p.views for p in ps)}
+                               for n, ps in by(page_name, dropped).items()],
         },
     }
     with open(out_path, "w", encoding="utf-8") as f:
@@ -177,7 +190,6 @@ def main(out_path):
     for r in data["top_competitor"][:8]:
         print(f"  {r['views']:7} da {r['da']:4} {r['brand']:8} {r['account'][:16]:16} | {r['title'][:70]}")
     print("\nQUALITY", data["quality"])
-    print("\nEX-DANKE", {k: round(v, 4) if isinstance(v, float) else v for k, v in ex_danke.items()})
     print("GROUPS", [(g["group"], g["posts"], f(g["views"]), round(g["organic_share"], 3), round(g["da_rate"], 4)) for g in groups])
     print("ROBOROCK TOTAL", {k: round(v, 4) if isinstance(v, float) else v for k, v in data["roborock_total"].items()})
     print("\nANGLES (Roborock posts)")
@@ -190,8 +202,8 @@ def main(out_path):
     for a in rob_by_account[:20]:
         print(f"  {a['account'][:26]:26} {a['group']:6} posts {a['posts']:4} views {f(a['views']):>8} org {a['organic_share']:.0%} "
               f"paid_posts {a['paid_posts']:3} da {a['da']:4} rate {a['da_rate']:.4f} share_da {a['da'] / tot_da:.1%}")
-    print("\nORGANIC PER POST (pages >= 8 posts, ex Danke)")
-    cand = [pg for pg in page_rows if pg["posts"] >= 8 and pg["account"] != "Danke"]
+    print("\nORGANIC PER POST (pages >= 8 posts)")
+    cand = [pg for pg in page_rows if pg["posts"] >= 8]
     for pg in sorted(cand, key=lambda r: -r["organic"] / r["posts"])[:12]:
         print(f"  {pg['page'][:42]:42} posts {pg['posts']:3} org/post {pg['organic'] / pg['posts']:6,.0f} share {pg['organic_share']:.0%} "
               f"da_rate {pg['da_rate']:.4f}")

@@ -223,14 +223,14 @@ ul.dq { margin: 0; padding-left: 18px; display: flex; flex-direction: column; ga
 
 <!-- ============================== 3. ORGANIC ============================== -->
 <div class="sec-head"><div class="sec-num">3</div><div><h2>Organic Reach</h2>
-  <p>Which pages earn reach without ads. Danke is shown apart because it is in a different league.</p></div></div>
+  <p>Which pages earn reach without ads.</p></div></div>
 <div class="grid">
   <section class="card s8">
-    <h3 class="chart-title">Organic Views per Post · Pages with ≥ 8 Posts (excl. Danke)</h3>
+    <h3 class="chart-title">Organic Views per Post · Pages with ≥ 8 Posts</h3>
     <div class="legend"><span><i style="background:var(--brand)"></i>Mostly Roborock content</span><span><i style="background:var(--violet)"></i>Mostly other categories</span></div>
     <div class="chart-box tall"><canvas id="ch-organic" aria-label="Organic views per post by page"></canvas></div>
   </section>
-  <section class="card s4" id="danke-card"></section>
+  <section class="card s4" id="organic-card"></section>
 </div>
 
 <!-- ============================== 4. CATEGORY & BRAND ============================== -->
@@ -326,13 +326,13 @@ const P = (v, d = 0) => N((v ?? 0) * 100, d) + "%";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const $ = id => document.getElementById(id);
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const T = DATA.total, R = DATA.roborock_total, F = DATA.floor_total, X = DATA.ex_danke;
+const T = DATA.total, R = DATA.roborock_total, F = DATA.floor_total, q = DATA.quality;
 const acc = name => DATA.accounts.find(a => a.account === name) || {};
 const robAcc = name => DATA.roborock_by_account.find(a => a.account === name) || {};
 const W1 = DATA.weeks[0], W2 = DATA.weeks[1];
 const delta = (a, b) => b ? (a - b) / b : 0;
 const arrow = (v, goodUp = true) => `<span class="${(v >= 0) === goodUp ? "up" : "down"}">${v >= 0 ? "▲" : "▼"}${P(Math.abs(v), 1)}</span>`;
-const danke = acc("Danke"), dankeRob = robAcc("Danke"), bigmi = robAcc("BigMi");
+const bigmi = robAcc("BigMi"), flag = robAcc("Roborock Flagship");
 const cat = c => DATA.categories.find(x => x.category === c) || {};
 const angle = a => DATA.angles.find(x => x.angle === a) || {};
 const prod = p => DATA.products.find(x => x.product === p) || {};
@@ -346,7 +346,7 @@ const brandedPosts = branded.reduce((s, b) => s + b.posts, 0);
 $("meta-scope").textContent = `${DATA.quality.pages} pages · ${DATA.accounts.length} dealer accounts · So9 API · Roborock partner pages`;
 const kpis = [
   ["Posts", N(T.posts), `W1 ${N(W1.posts)} → W2 ${N(W2.posts)} ${arrow(delta(W2.posts, W1.posts))}`],
-  ["Total Views", K(T.views), `${P(T.organic_share)} organic · excl. Danke ${P(X.organic_share)}`],
+  ["Total Views", K(T.views), `${P(T.organic_share)} organic · ${N(T.paid_posts)} boosted posts`],
   ["Engagement", K(T.engagement), `React + Cmt + Share + Click · ER ${P(T.er, 2)}`],
   ["Deep Action", N(T.da), `cmt + share · DA rate ${P(T.da_rate, 2)}`],
   ["Roborock Voice", P(R.posts / F.posts), `of floor-care posts · ${P(R.views / F.views)} of views`],
@@ -355,18 +355,20 @@ const kpis = [
 $("hero-kpis").innerHTML = kpis.map(([l, v, s]) => `<div class="kpi"><div class="lab">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join("");
 
 const exp = angle("Experience / event"), gift = angle("Gift 20/10"), promo = angle("Promo / price"), demo = angle("Demo / feature");
+const top10 = DATA.top_roborock_views.slice(0, 10), top10Views = top10.reduce((s, p) => s + p.views, 0);
+const compPosts = DATA.competitor_accounts.reduce((s, a) => s + a.posts, 0), comp3 = DATA.competitor_accounts.slice(0, 3);
 const takeaways = [
-  ["t-reach", "Reach", `Danke is the network's organic engine`,
-    `Danke drove ${P(danke.views / T.views)} of all views (${K(danke.views)}, ${P(danke.organic_share)} organic) with lifestyle kitchen stories. Roborock is ${P(dankeRob.views / danke.views, 1)} of Danke's views, yet Danke's F25 Ultra Steam Gen 2 post is the #1 Roborock post in the network.`,
-    `→ Brief Danke on a monthly Roborock story in its own voice.`],
+  ["t-reach", "Reach", `Ten boosted posts carry ${P(top10Views / R.views)} of Roborock reach`,
+    `The top 10 Roborock posts drew ${K(top10Views)} of ${K(R.views)} Roborock views, ${P(top10.reduce((s, p) => s + p.paid, 0) / top10Views, 1)} of it paid. Roborock flagship stores alone took ${P(flag.views / R.views)} of Roborock views with ${N(flag.posts)} posts, at a ${P(flag.da_rate, 2)} DA rate.`,
+    `→ Move part of the flagship boost budget to demo posts that already start conversations.`],
   ["t-paid", "Paid", `Roborock reach is ${P(1 - R.organic_share)} bought`,
-    `Outside Danke only ${P(X.organic_share)} of views are organic. Roborock posts average ${N(R.views_per_post)} views, and ${P(R.nonfollower_share)} of views reach non-followers, mostly through boosts.`,
+    `Only ${P(T.organic_share)} of all views are organic: ${N(T.paid_posts)} boosted posts (${P(T.paid_posts / T.posts)} of posts) bought ${P(T.paid / T.views)} of views. Roborock posts average ${N(R.views_per_post)} views, and ${P(R.nonfollower_share)} of their views reach non-followers.`,
     `→ Build an organic baseline: fewer, stronger demo reels per dealer.`],
   ["t-content", "Content", `Experiences earn depth, gifts and promos buy reach`,
     `Experience/event posts reach a ${P(exp.da_rate, 2)} DA rate, ${N(exp.da_rate / gift.da_rate, 1)}× the 20/10 gift posts (${P(gift.da_rate, 2)}). Gift posts average ${N(gift.views_per_post)} views and promo posts ${N(promo.views_per_post)}, with ${P(1 - gift.organic_share)} and ${P(1 - promo.organic_share)} of those views paid.`,
     `→ Put boost budget behind demo and experience posts that already start conversations.`],
   ["t-share", "Share", `Roborock owns ${P(R.posts / brandedPosts)} of branded floor-care posts`,
-    `Competitors appear mainly in multi-brand Xiaomi stores. The bigger gap is share of feed: some multi-category pages with good organic reach rarely post Roborock at all.`,
+    `The ${N(compPosts)} competitor posts come from multi-brand stores, led by ${comp3.map(a => esc(a.account)).join(", ")} (${P(comp3.reduce((s, a) => s + a.posts, 0) / compPosts)} of them). The bigger gap is share of feed: some multi-category pages with good organic reach rarely post Roborock at all.`,
     `→ Run a share-of-feed program with multi-category dealers.`],
 ];
 $("hero-takeaways").innerHTML = takeaways.map(([c, tag, h, p, a], i) =>
@@ -375,8 +377,8 @@ $("hero-takeaways").innerHTML = takeaways.map(([c, tag, h, p, a], i) =>
 // ---------- 1. network tiles
 const tiles = [
   ["Posts / day", N(T.posts / 14, 0), `W2 ${arrow(delta(W2.posts, W1.posts))} vs W1`],
-  ["Views / post", N(T.views_per_post), `excl. Danke ${N(X.views_per_post)}`],
-  ["Organic share", P(T.organic_share), `excl. Danke ${P(X.organic_share)}`],
+  ["Views / post", N(T.views_per_post), `Roborock posts ${N(R.views_per_post)}`],
+  ["Organic share", P(T.organic_share), `Roborock posts ${P(R.organic_share)}`],
   ["Non-follower reach", P(T.nonfollower_share), "of views from non-followers"],
   ["DA rate", P(T.da_rate, 2), "deep actions ÷ views, 2 weeks"],
   ["Roborock DA rate", P(R.da_rate, 2), `${N(R.da)} deep actions`],
@@ -423,21 +425,21 @@ $("tbl-groups").innerHTML = `<thead><tr><th>Group</th><th class="r">Posts</th><t
 const top3 = DATA.roborock_by_account.slice(0, 3);
 $("dealer-callouts").innerHTML = `
   <div class="callout"><b>BigMi is the Roborock backbone</b><p>${N(bigmi.posts)} Roborock posts (${P(bigmi.posts / R.posts)} of the network), ${K(bigmi.views)} views and ${P(bigmi.da / R.da)} of all Roborock deep action.</p></div>
-  <div class="callout"><b>The long tail talks back</b><p>Long-tail dealers publish ${P(gD.posts / T.posts)} of posts with a ${P(gD.da_rate, 2)} DA rate, ${N(gD.da_rate / gCM.da_rate, 1)}× the CM key accounts. Small pages build conversation; key accounts buy reach.</p></div>
+  <div class="callout"><b>Flagship stores buy reach, not conversation</b><p>Roborock flagship stores published ${P(gB.posts / T.posts, 1)} of posts but drew ${P(gB.views / T.views)} of views, ${P(1 - gB.organic_share)} paid, at a ${P(gB.da_rate, 2)} DA rate. CM key accounts (${P(gCM.da_rate, 2)}) and long-tail dealers (${P(gD.da_rate, 2)}) start ${N(Math.min(gCM.da_rate, gD.da_rate) / gB.da_rate)}× or more conversations per view.</p></div>
   <div class="callout"><b>Concentration</b><p>The top 3 accounts (${top3.map(a => esc(a.account)).join(", ")}) hold ${P(top3.reduce((s, a) => s + a.views, 0) / R.views)} of Roborock views.</p></div>`;
 
 // ---------- 3. organic
-const orgPages = DATA.pages.filter(p => p.posts >= 8 && p.account !== "Danke").map(p => {
+const orgPages = DATA.pages.filter(p => p.posts >= 8).map(p => {
   const a = acc(p.account);
   return { ...p, opp: p.organic / p.posts, robShare: a.posts ? a.roborock_posts / a.posts : 0 };
 }).sort((a, b) => b.opp - a.opp).slice(0, 14);
-const dankePage = DATA.pages.find(p => p.account === "Danke" && p.posts > 50) || {};
-const dankeTop = DATA.top_roborock_views.find(p => p.account === "Danke");
-$("danke-card").innerHTML = `<h3>Danke · the outlier</h3>
-  <div class="big-note" style="margin-top:12px">${K(danke.organic)}</div><p class="muted small" style="margin:2px 0 12px">organic views in 2 weeks · ${N(danke.organic / danke.posts)} per post</p>
+const topOrg = [...DATA.pages].sort((a, b) => b.organic - a.organic)[0];
+const otherOrganic = (T.organic - R.organic) / (T.views - R.views);   // bài không phải Roborock (ngành khác + brand khác)
+$("organic-card").innerHTML = `<h3>Organic · a thin layer</h3>
+  <div class="big-note" style="margin-top:12px">${K(T.organic)}</div><p class="muted small" style="margin:2px 0 12px">organic views in 2 weeks · ${P(T.organic_share)} of all views</p>
   <div class="callouts" style="grid-template-columns:1fr;margin-top:0">
-    <div class="callout"><b>${P(danke.views / T.views)} of network views</b><p>${N(danke.posts)} posts, mostly kitchen and home stories told in first person (Cuckoo, Fissler, Philips). Only ${N(danke.floor_posts)} posts are floor care.</p></div>
-    <div class="callout"><b>Roborock rides the same engine</b><p>Danke's ${N(dankeRob.posts)} Roborock posts averaged ${N(dankeRob.views_per_post)} views (${P(dankeRob.organic_share)} organic), ${N(dankeRob.views_per_post / R.views_per_post, 1)}× the network's Roborock average.${dankeTop ? ` Its top post: “${esc(dankeTop.title.slice(0, 70))}…” ${K(dankeTop.views)} views, ${dankeTop.da} deep actions.` : ""}</p></div>
+    <div class="callout"><b>Roborock leans hardest on boosts</b><p>Only ${P(R.organic_share)} of Roborock views are organic, against ${P(otherOrganic)} for the dealers' other posts.</p></div>
+    <div class="callout"><b>Top organic page · ${esc(topOrg.page)}</b><p>${K(topOrg.organic)} organic views from ${N(topOrg.posts)} posts (${P(topOrg.organic_share)} organic), the most of any page.</p></div>
   </div>`;
 
 // ---------- 4. category & brand
@@ -455,11 +457,8 @@ $("tbl-portfolio").innerHTML = `<thead><tr><th>Dealer account</th><th class="r">
       <td class="xs muted">${esc(other)}</td></tr>`;
   }).join("") + "</tbody>";
 
-const lastDay = DATA.days[DATA.days.length - 1], matureDays = DATA.days.slice(0, -3);
-const matureRates = matureDays.map(d => d.rob_da_rate).sort((a, b) => a - b);
-$("daily-note").textContent = `Views are lifetime-to-date at the 21–22 Oct pull, so the newest posts have not finished accruing. ` +
-  `Posts from ${lastDay.day} show a ${P(lastDay.rob_da_rate, 1)} Roborock DA rate against ${P(matureRates[0], 1)}–${P(matureRates[matureRates.length - 1], 1)} on mature days, ` +
-  `which is why days and weeks are compared on post counts only.`;
+$("daily-note").textContent = `Views are lifetime-to-date at the ${q.pulled} So9 pull: every post had at least ${q.min_age_days} days to collect views, ` +
+  `but W1 posts had about a week longer than W2, so days and weeks are compared on post counts only.`;
 
 // ---------- 5. products
 const prods = DATA.products.filter(p => p.posts >= 5).sort((a, b) => b.posts - a.posts);
@@ -468,15 +467,13 @@ $("tbl-products").innerHTML = `<thead><tr><th>Model</th><th class="r">Posts</th>
   <th class="r">Organic</th><th class="r">Deep action</th><th class="r">DA rate</th></tr></thead><tbody>` +
   prods.map(p => `<tr><td class="acct">${esc(p.product.replace("Roborock ", ""))}</td><td class="r">${N(p.posts)}</td><td class="r">${P(p.posts / R.posts, 1)}</td>
     <td class="r">${K(p.views)}</td><td class="r">${N(p.views_per_post)}</td><td class="r">${P(p.organic_share)}</td><td class="r">${N(p.da)}</td><td class="r">${P(p.da_rate, 2)}</td></tr>`).join("") + "</tbody>";
-const saros = prod("Roborock Saros 20 Flow Complete"), f25s = prod("Roborock F25 Ultra Steam Gen 2"), q2p = prod("Roborock Qrevo 2 Pro"),
-      qe2f = prod("Roborock Qrevo Edge 2 Flow"), gen = prod("Roborock (generic)");
-const f25Top = DATA.top_roborock_views.filter(p => p.product === "Roborock F25 Ultra Steam Gen 2").sort((a, b) => b.organic - a.organic)[0] || { organic: 0, views: 0 };
+const saros = prod("Roborock Saros 20 Flow Complete"), f25s = prod("Roborock F25 Ultra Steam Gen 2"), f25u = prod("Roborock F25 Ultra"),
+      q2p = prod("Roborock Qrevo 2 Pro"), qe2f = prod("Roborock Qrevo Edge 2 Flow"), gen = prod("Roborock (generic)");
 $("product-callouts").innerHTML = `
   <div class="callout"><b>Workhorse · Saros 20 Flow Complete</b><p>${P(saros.posts / R.posts)} of Roborock posts (${N(saros.posts)}), ${K(saros.views)} views at a solid ${P(saros.da_rate, 2)} DA rate. Keep it as the hero.</p></div>
-  <div class="callout"><b>Breakout story · F25 Ultra Steam Gen 2</b><p>${P(f25s.organic_share)} organic overall, but one Danke post carried ${K(f25Top.organic)} of its ${K(f25s.organic)} organic views.
-    Without it the model is ${P((f25s.organic - f25Top.organic) / (f25s.views - f25Top.views))} organic, like the rest. One native story out-earned the other ${N(f25s.posts - 1)} posts combined.</p></div>
+  <div class="callout"><b>Conversation starter · F25 Ultra Steam Gen 2</b><p>${N(f25s.posts)} posts at a ${P(f25s.da_rate, 2)} DA rate, ${N(f25s.da_rate / R.da_rate, 1)}× the Roborock average, with ${P(f25s.organic_share)} of views organic (Roborock average ${P(R.organic_share)}). The new model gets people talking without heavy boosts.</p></div>
   <div class="callout"><b>Under-amplified · Qrevo Edge 2 Flow</b><p>${P(qe2f.da_rate, 2)} DA rate (${N(qe2f.da_rate / R.da_rate, 1)}× the Roborock average) but only ${N(qe2f.views_per_post)} views per post. A strong candidate for extra boost budget.</p></div>
-  <div class="callout"><b>Paid-heavy · Qrevo 2 Pro &amp; brand promos</b><p>Qrevo 2 Pro is ${P(1 - q2p.organic_share)} paid at a ${P(q2p.da_rate, 2)} DA rate. Generic Roborock promos take ${P(gen.views / R.views)} of Roborock views at ${P(gen.da_rate, 2)}. Check them against stock before scaling.</p></div>`;
+  <div class="callout"><b>Paid-heavy · F25 Ultra, Qrevo 2 Pro &amp; brand promos</b><p>F25 Ultra has the most Roborock views (${K(f25u.views)}, ${P(f25u.views / R.views)}) but is ${P(1 - f25u.organic_share)} paid at a ${P(f25u.da_rate, 2)} DA rate; Qrevo 2 Pro is ${P(1 - q2p.organic_share)} paid at ${P(q2p.da_rate, 2)}. Generic Roborock promos take ${P(gen.views / R.views)} of Roborock views at ${P(gen.da_rate, 2)}. Check them against stock before scaling.</p></div>`;
 
 // ---------- 6. content
 const angles = DATA.angles.filter(a => a.posts >= 20).sort((a, b) => b.da_rate - a.da_rate);
@@ -497,15 +494,17 @@ document.querySelectorAll("[data-top]").forEach(b => b.addEventListener("click",
 renderTop("top_roborock_views");
 
 // ---------- 7. takeaways
-$("summary-box").innerHTML = `<p style="margin:0;color:var(--ink)"><b>Summary:</b> ${N(T.posts)} posts from ${DATA.quality.pages} pages reached ${K(T.views)} views in two weeks,
-  but ${P(danke.views / T.views)} of that came from Danke's kitchen content. Roborock content (${N(R.posts)} posts, ${K(R.views)} views) is ${P(1 - R.organic_share)} paid and converts
-  ${P(R.da_rate, 2)} of views into comments and shares. Roborock owns its partners' floor-care voice; the opportunity is depth (experience and demo content),
-  organic reach (borrowing Danke-style storytelling) and share of feed on multi-category pages.</p>
-  <p class="act" style="margin:8px 0 0">Next 2 weeks: shift boosts from gift/promo posts to demo and experience reels, brief Danke on one Roborock story, and add Roborock content slots with AKIA, Trustlink and the Xiaomi stores.</p>`;
+$("summary-box").innerHTML = `<p style="margin:0;color:var(--ink)"><b>Summary:</b> ${N(T.posts)} posts from ${q.pages} pages reached ${K(T.views)} views in two weeks,
+  ${P(T.paid / T.views)} of them paid. Roborock content (${N(R.posts)} posts, ${K(R.views)} views) converts ${P(R.da_rate, 2)} of views into comments and shares,
+  and flagship-store boosts bought ${P(flag.views / R.views)} of Roborock views at a ${P(flag.da_rate, 2)} DA rate. Roborock owns its partners' floor-care voice; the opportunity is depth
+  (experience and demo content), an organic baseline and share of feed on multi-category pages.</p>
+  <p class="act" style="margin:8px 0 0">Next 2 weeks: shift boosts from gift/promo posts to demo and experience reels, move part of the flagship boost budget to posts that already start conversations, and add Roborock content slots with AKIA, Trustlink and the Xiaomi stores.</p>`;
+// mẫu cho đại lý: bài video/reel về 1 model cụ thể có DA rate cao nhất (≥ 1K view), bỏ thông cáo / khuyến mãi chung
+const rateTop = DATA.top_roborock_da_rate.find(p => p.product !== "Roborock (generic)" && p.type !== "Post") || DATA.top_roborock_da_rate[0];
 const actions = [
   ["t-content", "Content team", [
     `Make experience and demo the default angle: DA rate ${P(exp.da_rate, 2)} and ${P(demo.da_rate, 2)} vs ${P(gift.da_rate, 2)} for gift posts.`,
-    `Turn Danke's F25 Ultra Steam Gen 2 story (first-person, problem first, ${K(f25Top.organic)} organic views) into a template for dealers.`,
+    `Use ${esc(rateTop.account)}'s ${esc(rateTop.product.replace("Roborock ", ""))} ${esc(rateTop.type.toLowerCase())} (${P(rateTop.da_rate, 2)} DA rate, ${N(rateTop.da)} deep actions on ${K(rateTop.views)} views) as a demo template for dealers.`,
     `Give Qrevo Edge 2 Flow a hero slot: its audience already engages at ${P(qe2f.da_rate, 2)}.`]],
   ["t-paid", "Digital / ads", [
     `Roborock views are ${P(1 - R.organic_share)} paid. Review boosts on generic promos (${P(gen.da_rate, 2)} DA rate) and Qrevo 2 Pro (${P(1 - q2p.organic_share)} paid).`,
@@ -518,10 +517,10 @@ const actions = [
 ];
 $("actions").innerHTML = actions.map(([c, h, items]) => `<div class="tk"><div class="tk-head"><span class="tag ${c}">${h}</span></div>
   <ul class="dq" style="margin-top:8px">${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`).join("");
-const q = DATA.quality;
+const exViews = q.excluded_pages.reduce((s, e) => s + e.views, 0);
 $("dq").innerHTML = [
-  `<b>Period:</b> posts published 07–20 Oct 2026 (two full weeks). Views are lifetime-to-date at the 21–22 Oct pull, so W2 views are still growing and rates on the newest posts run high (${lastDay.day}: ${P(lastDay.rob_da_rate, 1)} DA rate). Weeks are compared on post counts only.`,
-  `<b>Robustness:</b> the angle, model and dealer conclusions were re-checked on posts at least 4 days old (07–17 Oct) and still hold, e.g. experience posts 1.12% DA rate vs 0.12% for gift posts, Qrevo Edge 2 Flow 1.18%.`,
+  `<b>Period:</b> posts published 07–20 Oct 2026 (two full weeks). Views are lifetime-to-date at the ${q.pulled} So9 pull${q.pulled_older_posts ? ` (${N(q.pulled_older_posts)} posts So9 no longer returns keep their earlier numbers)` : ""}; every post had at least ${q.min_age_days} days to collect views, W1 posts about a week longer than W2. Weeks are compared on post counts only.`,
+  ...(q.excluded_pages.length ? [`<b>Excluded page:</b> ${q.excluded_pages.map(e => `“${esc(e.page)}” (${N(e.posts)} posts, ${K(e.views)} views)`).join(", ")} is left out of every number: its reach would be ${P(exViews / (T.views + exViews))} of all views and skew every network rate. Danke's robot vacuum page in Đà Nẵng stays in.`] : []),
   `<b>Dealer mapping:</b> only ${q.pages_with_dealer_in_app} of ${q.pages} pages have a dealer in Creative Win. Accounts here are grouped by page name (e.g. “Roborock Authorized Store – Robozen Đà Nẵng” → Robozen Đà Nẵng, “DHP Cần Thơ” → Đại Hồng Phát). Giang Chi has no page in So9.`,
   `<b>Category, brand and angle</b> are detected from captions by keyword: about ${P(q.other_store_posts / q.posts_in_window)} of posts have no detectable category, and ${q.posts_no_title} posts have no caption.`,
   `<b>Share of voice</b> covers partner pages connected to So9 only. Market-wide SOV needs social listening.`,
@@ -529,7 +528,7 @@ $("dq").innerHTML = [
   `<b>Clicks</b> are only available from the So9 file export, not the API, so Engagement undercounts clicks on posts pulled by API only.`,
 ].map(t => `<li>${t}</li>`).join("");
 $("next").innerHTML = [
-  `<b>Social → Inbox:</b> messages per dealer from the new So9 inbox database (pull in progress) to link content to leads and orders.`,
+  `<b>Social → Inbox:</b> messages per dealer from the So9 inbox data now in Creative Win, to link content to leads and orders.`,
   `<b>Boost spend per post</b> to measure cost per view and cost per deep action.`,
   `<b>Weekly snapshots</b> of post metrics so views can be compared at the same age (e.g. day 3).`,
   `<b>Dealer mapping</b> completed in Creative Win (Dealer &amp; Page) so every page rolls up correctly.`,
@@ -576,11 +575,20 @@ function drawCharts() {
                 y: { beginAtZero: true, title: { display: true, text: "Deep action rate" }, ticks: { callback: v => P(v, 1) } } } },
     plugins: [{ id: "labels", afterDatasetsDraw(chart) {
       const ctx = chart.ctx; ctx.save(); ctx.font = `600 11px ${Chart.defaults.font.family}`; ctx.fillStyle = C.ink; ctx.textAlign = "center";
-      chart.data.datasets.forEach((ds, i) => chart.getDatasetMeta(i).data.forEach((el, j) => {
-        const d = ds.data[j]; if (d.views >= 15000 || d.y >= .012) ctx.fillText(d.name, el.x, el.y - d.r - 4); }));
+      // bóng lớn ghi tên trước; nhãn đè lên nhãn đã ghi thì bỏ (vẫn xem được qua tooltip)
+      const items = chart.data.datasets.flatMap((ds, i) => chart.getDatasetMeta(i).data.map((el, j) => ({ el, d: ds.data[j] })))
+        .filter(({ d }) => d.views >= 15000 || d.y >= .012).sort((a, b) => b.d.views - a.d.views);
+      const placed = [];
+      for (const { el, d } of items) {
+        const w = ctx.measureText(d.name).width, y = el.y - d.r - 4, box = [el.x - w / 2 - 2, y - 11, el.x + w / 2 + 2, y + 3];
+        if (placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+        placed.push(box);
+        ctx.fillText(d.name, el.x, y);
+      }
       ctx.restore(); } }] });
 
-  mk("ch-organic", { type: "bar", data: { labels: orgPages.map(p => p.page.length > 34 ? p.page.slice(0, 33) + "…" : p.page), datasets: [
+  const labMax = innerWidth < 600 ? 20 : 34;   // màn hẹp: tên Page dài làm nhãn trục trái tràn ra ngoài khung
+  mk("ch-organic", { type: "bar", data: { labels: orgPages.map(p => p.page.length > labMax ? p.page.slice(0, labMax - 1) + "…" : p.page), datasets: [
       { label: "Organic views per post", data: orgPages.map(p => p.opp), backgroundColor: orgPages.map(p => p.robShare >= .5 ? C.brand : C.violet), borderRadius: 4 }] },
     options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${N(c.raw)} organic views/post · ${P(orgPages[c.dataIndex].organic_share)} organic · ${orgPages[c.dataIndex].posts} posts` } } },
       scales: { x: { ticks: { callback: v => K(v) } }, y: { grid: { display: false }, ticks: { autoSkip: false } } } } });
@@ -615,6 +623,7 @@ function drawCharts() {
 }
 if (window.Chart) {
   drawCharts();
+  document.fonts?.ready.then(drawCharts);   // vẽ lại khi font web tải xong: Chart.js đo chữ bằng font dự phòng -> nhãn trục bị cắt mép
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawCharts);
   new MutationObserver(drawCharts).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }

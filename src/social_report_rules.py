@@ -21,6 +21,10 @@ ACCOUNTS = [
     ("Roborock Flagship", "Brand", r"roborock flagship"),
 ]
 
+# Page loại khỏi report (tên Page bỏ dấu, khớp nguyên tên). 29/10/2026 người dùng yêu cầu bỏ "DANKE Gia dụng cao cấp":
+# Page gia dụng nhà bếp chiếm hơn nửa view cả mạng nên kéo lệch mọi tỉ lệ. Page robot của Danke ở Đà Nẵng vẫn giữ.
+EXCLUDED_PAGES = {"danke gia dung cao cap"}
+
 # Ngành hàng: thứ tự = ưu tiên (robot / chăm sóc sàn xét trước). Mẫu tìm trong caption không dấu.
 CATEGORIES = [
     ("Floor care", r"robot hut bui|robot lau|hut bui lau nha|may lau (san|nha)|may hut bui|hut bui|robot|roborock|dreame|"
@@ -56,6 +60,10 @@ def plain(s: str) -> str:
     """Chữ thường, bỏ dấu tiếng Việt (giữ khoảng trắng và &)."""
     s = unicodedata.normalize("NFD", (s or "").lower())
     return "".join(c for c in s if unicodedata.category(c) != "Mn").replace("đ", "d")
+
+
+def excluded(page_name: str) -> bool:
+    return " ".join(plain(page_name).split()) in EXCLUDED_PAGES
 
 
 _ACC = [(n, g, re.compile(p)) for n, g, p in ACCOUNTS]

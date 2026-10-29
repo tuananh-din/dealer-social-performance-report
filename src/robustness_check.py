@@ -39,7 +39,7 @@ for k in ("Experience / event", "Demo / feature", "Gift 20/10", "Promo / price",
     print(f"  {k:20}", rate(by_angle[k]))
 for k in ("Roborock Saros 20 Flow Complete", "Roborock F25 Ultra Steam Gen 2", "Roborock F25 Ultra", "Roborock Qrevo 2 Pro",
           "Roborock Qrevo Edge 2 Flow", "Roborock (chung)"):
-    hits = [n for n in by_prod if n.startswith(k)]
+    hits = [n for n in by_prod if n == k]   # khớp đúng tên: "F25 Ultra" là mã riêng, không gộp "F25 Ultra Steam Gen 2" (29/10)
     print(f"  {k[:30]:30}", rate([p for n in hits for p in by_prod[n]]))
 for name in ("BigMi", "H&T Smart Home", "CellphoneS", "Cường Phát"):
     print(f"  ACC {name:18}", rate([p for (a, g), ps in by_acc.items() if a == name for p in ps]))

@@ -1,5 +1,7 @@
 """Số liệu Social Report toàn đại lý (bài Fanpage công khai). Chỉ đọc DB. In tóm tắt + ghi JSON cho dashboard.
-Chạy trong container app: PYTHONPATH=/code:/tmp python /tmp/analyze_social_report.py /tmp/social-report-data.json"""
+Chạy trong container app: PYTHONPATH=/code:/tmp python /tmp/analyze_social_report.py /tmp/social-report-data.json
+Share / Deep Action dùng chung công thức của app (social.post_shares / deep_action, người dùng chốt 30/10/2026): share lấy số
+lớn hơn giữa bài và QC chạy chính bài, DA = bình luận + share + lượt lưu từ QC (Page đại lý chưa nối QC nên lượt lưu = 0)."""
 import json
 import re
 import sys
@@ -10,8 +12,8 @@ from sqlalchemy import select
 
 from app import social  # noqa: F401
 from app.db import SessionLocal
-from app.social import Dealer, Product, SocialPage, SocialPost, product_matcher
-from social_report_rules import account_of, angle_of, classify, excluded
+from app.social import Dealer, Product, SocialPage, SocialPost, deep_action, post_shares, product_matcher
+from social_report_rules import account_of, angle_of, brand_page, classify, excluded
 
 START, END = date(2026, 10, 7), date(2026, 10, 20)          # 2 tuần trọn vẹn (21/10 mới có nửa ngày)
 VN = timedelta(hours=7)                                      # updated_at lưu giờ UTC
@@ -28,7 +30,7 @@ def summ(posts):
     for p in posts:
         rx = p.r_like + p.r_love + p.r_haha + p.r_wow + p.r_sorry + p.r_anger
         s.update(posts=1, views=p.views, organic=p.views_organic, paid=p.views_paid, reactions=rx, comments=p.comments,
-                 shares=p.shares, clicks=p.clicks, da=p.comments + p.shares, engagement=rx + p.comments + p.shares + p.clicks,
+                 shares=post_shares(p), clicks=p.clicks, da=deep_action(p), engagement=rx + p.comments + post_shares(p) + p.clicks,
                  paid_posts=1 if p.views_paid else 0, follower=p.views_follower, nonfollower=p.views_nonfollower)
     v = s["views"]
     rcs = s["reactions"] + s["comments"] + s["shares"]
@@ -44,8 +46,8 @@ def post_row(p, ctx):
     return {"title": re.sub(r"\s+", " ", p.title or "")[:160], "link": p.permalink, "page": ctx["page"], "account": ctx["account"],
             "type": p.post_type, "product": ctx["product"], "brand": ctx["brand"], "category": ctx["category"],
             "date": p.published_at.strftime("%d/%m") if p.published_at else "", "views": p.views, "organic": p.views_organic,
-            "paid": p.views_paid, "da": p.comments + p.shares, "comments": p.comments, "shares": p.shares, "reactions": rx,
-            "da_rate": (p.comments + p.shares) / p.views if p.views else 0}
+            "paid": p.views_paid, "da": deep_action(p), "comments": p.comments, "shares": post_shares(p), "reactions": rx,
+            "da_rate": deep_action(p) / p.views if p.views else 0}
 
 
 def main(out_path):
@@ -54,7 +56,7 @@ def main(out_path):
         dealers = {d.id: d.name for d in db.scalars(select(Dealer))}
         match = product_matcher(db.scalars(select(Product)).all())
         window = [p for p in db.scalars(select(SocialPost)) if p.published_at and not p.duplicate_of
-                  and START <= p.published_at.date() <= END]
+                  and START <= p.published_at.date() <= END and not brand_page(pages.get(p.page_id))]
     page_name = lambda p: pages[p.page_id].name if p.page_id in pages else ""  # noqa: E731
     rows = [p for p in window if not excluded(page_name(p))]
     dropped = [p for p in window if excluded(page_name(p))]
@@ -95,7 +97,7 @@ def main(out_path):
         accounts.append({"account": acc, "group": ctx[ps[0].id]["group"], "pages": len({p.page_id for p in ps}), **s,
                          "floor_posts": len(floor), "floor_views": sum(p.views for p in floor),
                          "roborock_posts": len(rob), "roborock_views": sum(p.views for p in rob),
-                         "roborock_da": sum(p.comments + p.shares for p in rob),
+                         "roborock_da": sum(deep_action(p) for p in rob),
                          "category_posts": dict(cats)})
     accounts.sort(key=lambda a: -a["views"])
     page_rows = []
@@ -129,8 +131,8 @@ def main(out_path):
         "categories": categories, "brands": brands, "products": products, "types": types, "roborock_types": rob_types,
         "roborock_total": summ(rob_posts), "floor_total": summ(floor_posts),
         "top_roborock_views": top(rob_posts, lambda p: -p.views),
-        "top_roborock_da": top(rob_posts, lambda p: -(p.comments + p.shares)),
-        "top_roborock_da_rate": top([p for p in rob_posts if p.views >= 1000], lambda p: -(p.comments + p.shares) / p.views),
+        "top_roborock_da": top(rob_posts, lambda p: -deep_action(p)),
+        "top_roborock_da_rate": top([p for p in rob_posts if p.views >= 1000], lambda p: -deep_action(p) / p.views),
         "top_all_views": top(rows, lambda p: -p.views),
         "top_competitor": top(comp_posts, lambda p: -p.views, 8),
         "competitor_accounts": [{"account": a, "posts": n} for a, n in Counter(ctx[p.id]["account"] for p in comp_posts).most_common()],

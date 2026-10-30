@@ -332,7 +332,7 @@ const robAcc = name => DATA.roborock_by_account.find(a => a.account === name) ||
 const W1 = DATA.weeks[0], W2 = DATA.weeks[1];
 const delta = (a, b) => b ? (a - b) / b : 0;
 const arrow = (v, goodUp = true) => `<span class="${(v >= 0) === goodUp ? "up" : "down"}">${v >= 0 ? "▲" : "▼"}${P(Math.abs(v), 1)}</span>`;
-const bigmi = robAcc("BigMi"), flag = robAcc("Roborock Flagship");
+const bigmi = robAcc("BigMi");
 const cat = c => DATA.categories.find(x => x.category === c) || {};
 const angle = a => DATA.angles.find(x => x.angle === a) || {};
 const prod = p => DATA.products.find(x => x.product === p) || {};
@@ -348,7 +348,7 @@ const kpis = [
   ["Posts", N(T.posts), `W1 ${N(W1.posts)} → W2 ${N(W2.posts)} ${arrow(delta(W2.posts, W1.posts))}`],
   ["Total Views", K(T.views), `${P(T.organic_share)} organic · ${N(T.paid_posts)} boosted posts`],
   ["Engagement", K(T.engagement), `React + Cmt + Share + Click · ER ${P(T.er, 2)}`],
-  ["Deep Action", N(T.da), `cmt + share · DA rate ${P(T.da_rate, 2)}`],
+  ["Deep Action", N(T.da), `cmt + share + save · DA rate ${P(T.da_rate, 2)}`],
   ["Roborock Voice", P(R.posts / F.posts), `of floor-care posts · ${P(R.views / F.views)} of views`],
   ["Roborock Posts", N(R.posts), `${P(R.posts / T.posts)} of all posts · ${P(R.organic_share)} organic`],
 ];
@@ -359,8 +359,8 @@ const top10 = DATA.top_roborock_views.slice(0, 10), top10Views = top10.reduce((s
 const compPosts = DATA.competitor_accounts.reduce((s, a) => s + a.posts, 0), comp3 = DATA.competitor_accounts.slice(0, 3);
 const takeaways = [
   ["t-reach", "Reach", `Ten boosted posts carry ${P(top10Views / R.views)} of Roborock reach`,
-    `The top 10 Roborock posts drew ${K(top10Views)} of ${K(R.views)} Roborock views, ${P(top10.reduce((s, p) => s + p.paid, 0) / top10Views, 1)} of it paid. Roborock flagship stores alone took ${P(flag.views / R.views)} of Roborock views with ${N(flag.posts)} posts, at a ${P(flag.da_rate, 2)} DA rate.`,
-    `→ Move part of the flagship boost budget to demo posts that already start conversations.`],
+    `The top 10 Roborock posts drew ${K(top10Views)} of ${K(R.views)} Roborock views, ${P(top10.reduce((s, p) => s + p.paid, 0) / top10Views, 1)} of it paid.`,
+    `→ Spread boosts across more demo posts instead of a few big pushes.`],
   ["t-paid", "Paid", `Roborock reach is ${P(1 - R.organic_share)} bought`,
     `Only ${P(T.organic_share)} of all views are organic: ${N(T.paid_posts)} boosted posts (${P(T.paid_posts / T.posts)} of posts) bought ${P(T.paid / T.views)} of views. Roborock posts average ${N(R.views_per_post)} views, and ${P(R.nonfollower_share)} of their views reach non-followers.`,
     `→ Build an organic baseline: fewer, stronger demo reels per dealer.`],
@@ -418,14 +418,14 @@ $("tbl-dealers").innerHTML = dealerHead + "<tbody>" + dealers.slice(0, 20).map(d
 $("tbl-dealers-rest").innerHTML = dealerHead + "<tbody>" + dealers.slice(20).map(dealerRow).join("") + "</tbody>";
 $("more-label").textContent = `Show the other ${dealers.length - 20} accounts`;
 
-const gCM = grp("CM"), gD = grp("Dealer"), gB = grp("Brand");
+const gCM = grp("CM"), gD = grp("Dealer");
 $("tbl-groups").innerHTML = `<thead><tr><th>Group</th><th class="r">Posts</th><th class="r">Views</th><th class="r">Organic</th><th class="r">DA rate</th></tr></thead><tbody>` +
-  [["CM key accounts", gCM], ["Long-tail dealers", gD], ["Roborock flagship stores", gB]].map(([l, g]) =>
+  [["CM key accounts", gCM], ["Long-tail dealers", gD]].map(([l, g]) =>
     `<tr><td class="acct">${l}</td><td class="r">${N(g.posts)}</td><td class="r">${K(g.views)}</td><td class="r">${P(g.organic_share)}</td><td class="r">${P(g.da_rate, 2)}</td></tr>`).join("") + "</tbody>";
 const top3 = DATA.roborock_by_account.slice(0, 3);
 $("dealer-callouts").innerHTML = `
   <div class="callout"><b>BigMi is the Roborock backbone</b><p>${N(bigmi.posts)} Roborock posts (${P(bigmi.posts / R.posts)} of the network), ${K(bigmi.views)} views and ${P(bigmi.da / R.da)} of all Roborock deep action.</p></div>
-  <div class="callout"><b>Flagship stores buy reach, not conversation</b><p>Roborock flagship stores published ${P(gB.posts / T.posts, 1)} of posts but drew ${P(gB.views / T.views)} of views, ${P(1 - gB.organic_share)} paid, at a ${P(gB.da_rate, 2)} DA rate. CM key accounts (${P(gCM.da_rate, 2)}) and long-tail dealers (${P(gD.da_rate, 2)}) start ${N(Math.min(gCM.da_rate, gD.da_rate) / gB.da_rate)}× or more conversations per view.</p></div>
+  <div class="callout"><b>Key accounts vs long tail</b><p>CM key accounts published ${P(gCM.posts / T.posts)} of posts and drew ${P(gCM.views / T.views)} of views at a ${P(gCM.da_rate, 2)} DA rate; long-tail dealers ran at ${P(gD.da_rate, 2)}.</p></div>
   <div class="callout"><b>Concentration</b><p>The top 3 accounts (${top3.map(a => esc(a.account)).join(", ")}) hold ${P(top3.reduce((s, a) => s + a.views, 0) / R.views)} of Roborock views.</p></div>`;
 
 // ---------- 3. organic
@@ -473,7 +473,7 @@ $("product-callouts").innerHTML = `
   <div class="callout"><b>Workhorse · Saros 20 Flow Complete</b><p>${P(saros.posts / R.posts)} of Roborock posts (${N(saros.posts)}), ${K(saros.views)} views at a solid ${P(saros.da_rate, 2)} DA rate. Keep it as the hero.</p></div>
   <div class="callout"><b>Conversation starter · F25 Ultra Steam Gen 2</b><p>${N(f25s.posts)} posts at a ${P(f25s.da_rate, 2)} DA rate, ${N(f25s.da_rate / R.da_rate, 1)}× the Roborock average, with ${P(f25s.organic_share)} of views organic (Roborock average ${P(R.organic_share)}). The new model gets people talking without heavy boosts.</p></div>
   <div class="callout"><b>Under-amplified · Qrevo Edge 2 Flow</b><p>${P(qe2f.da_rate, 2)} DA rate (${N(qe2f.da_rate / R.da_rate, 1)}× the Roborock average) but only ${N(qe2f.views_per_post)} views per post. A strong candidate for extra boost budget.</p></div>
-  <div class="callout"><b>Paid-heavy · F25 Ultra, Qrevo 2 Pro &amp; brand promos</b><p>F25 Ultra has the most Roborock views (${K(f25u.views)}, ${P(f25u.views / R.views)}) but is ${P(1 - f25u.organic_share)} paid at a ${P(f25u.da_rate, 2)} DA rate; Qrevo 2 Pro is ${P(1 - q2p.organic_share)} paid at ${P(q2p.da_rate, 2)}. Generic Roborock promos take ${P(gen.views / R.views)} of Roborock views at ${P(gen.da_rate, 2)}. Check them against stock before scaling.</p></div>`;
+  <div class="callout"><b>Paid-heavy · F25 Ultra, Qrevo 2 Pro &amp; brand promos</b><p>F25 Ultra has the most views of any Roborock model (${K(f25u.views)}, ${P(f25u.views / R.views)} of Roborock views) but is ${P(1 - f25u.organic_share)} paid at a ${P(f25u.da_rate, 2)} DA rate; Qrevo 2 Pro is ${P(1 - q2p.organic_share)} paid at ${P(q2p.da_rate, 2)}. Generic Roborock promos take ${P(gen.views / R.views)} of Roborock views at ${P(gen.da_rate, 2)}. Check them against stock before scaling.</p></div>`;
 
 // ---------- 6. content
 const angles = DATA.angles.filter(a => a.posts >= 20).sort((a, b) => b.da_rate - a.da_rate);
@@ -495,10 +495,10 @@ renderTop("top_roborock_views");
 
 // ---------- 7. takeaways
 $("summary-box").innerHTML = `<p style="margin:0;color:var(--ink)"><b>Summary:</b> ${N(T.posts)} posts from ${q.pages} pages reached ${K(T.views)} views in two weeks,
-  ${P(T.paid / T.views)} of them paid. Roborock content (${N(R.posts)} posts, ${K(R.views)} views) converts ${P(R.da_rate, 2)} of views into comments and shares,
-  and flagship-store boosts bought ${P(flag.views / R.views)} of Roborock views at a ${P(flag.da_rate, 2)} DA rate. Roborock owns its partners' floor-care voice; the opportunity is depth
+  ${P(T.paid / T.views)} of them paid. Roborock content (${N(R.posts)} posts, ${K(R.views)} views) converts ${P(R.da_rate, 2)} of views into comments and shares.
+  Roborock owns its partners' floor-care voice; the opportunity is depth
   (experience and demo content), an organic baseline and share of feed on multi-category pages.</p>
-  <p class="act" style="margin:8px 0 0">Next 2 weeks: shift boosts from gift/promo posts to demo and experience reels, move part of the flagship boost budget to posts that already start conversations, and add Roborock content slots with AKIA, Trustlink and the Xiaomi stores.</p>`;
+  <p class="act" style="margin:8px 0 0">Next 2 weeks: shift boosts from gift/promo posts to demo and experience reels, and add Roborock content slots with AKIA, Trustlink and the Xiaomi stores.</p>`;
 // mẫu cho đại lý: bài video/reel về 1 model cụ thể có DA rate cao nhất (≥ 1K view), bỏ thông cáo / khuyến mãi chung
 const rateTop = DATA.top_roborock_da_rate.find(p => p.product !== "Roborock (generic)" && p.type !== "Post") || DATA.top_roborock_da_rate[0];
 const actions = [
@@ -520,7 +520,7 @@ $("actions").innerHTML = actions.map(([c, h, items]) => `<div class="tk"><div cl
 const exViews = q.excluded_pages.reduce((s, e) => s + e.views, 0);
 $("dq").innerHTML = [
   `<b>Period:</b> posts published 07–20 Oct 2026 (two full weeks). Views are lifetime-to-date at the ${q.pulled} So9 pull${q.pulled_older_posts ? ` (${N(q.pulled_older_posts)} posts So9 no longer returns keep their earlier numbers)` : ""}; every post had at least ${q.min_age_days} days to collect views, W1 posts about a week longer than W2. Weeks are compared on post counts only.`,
-  ...(q.excluded_pages.length ? [`<b>Excluded page:</b> ${q.excluded_pages.map(e => `“${esc(e.page)}” (${N(e.posts)} posts, ${K(e.views)} views)`).join(", ")} is left out of every number: its reach would be ${P(exViews / (T.views + exViews))} of all views and skew every network rate. Danke's robot vacuum page in Đà Nẵng stays in.`] : []),
+  ...(q.excluded_pages.length ? [`<b>Excluded pages:</b> ${q.excluded_pages.map(e => `“${esc(e.page)}” (${N(e.posts)} posts, ${K(e.views)} views)`).join(", ")} are left out of every number: together they would be ${P(exViews / (T.views + exViews))} of all views and skew every network rate. DANKE Gia dụng cao cấp is a kitchenware page (Danke's robot vacuum page in Đà Nẵng stays in); the Roborock Flagship Stores are Roborock's own stores, not dealers. Roborock's brand page is not part of the dealer network either.`] : []),
   `<b>Dealer mapping:</b> only ${q.pages_with_dealer_in_app} of ${q.pages} pages have a dealer in Creative Win. Accounts here are grouped by page name (e.g. “Roborock Authorized Store – Robozen Đà Nẵng” → Robozen Đà Nẵng, “DHP Cần Thơ” → Đại Hồng Phát). Giang Chi has no page in So9.`,
   `<b>Category, brand and angle</b> are detected from captions by keyword: about ${P(q.other_store_posts / q.posts_in_window)} of posts have no detectable category, and ${q.posts_no_title} posts have no caption.`,
   `<b>Share of voice</b> covers partner pages connected to So9 only. Market-wide SOV needs social listening.`,

@@ -38,8 +38,8 @@ fmt = lambda t: find(D["roborock_types"], "type", t)  # noqa: E731
 top10 = D["top_roborock_views"][:10]
 claim(all(p["paid"] > 0 for p in top10), "Reach: 'Ten boosted posts' (top 10 bài Roborock đều có view trả phí)",
       ", ".join(f"{p['account']} {p['paid']}/{p['views']}" for p in top10))
-flag = rob_acc("Roborock Flagship")
-claim(flag.get("posts", 0) > 0, "Reach / Summary: có nhóm Roborock Flagship", f"{flag.get('posts')} bài, DA rate {pc(flag.get('da_rate', 0))}")
+claim(not any("flagship" in a["account"].lower() for a in D["accounts"]) and not any(g["group"] == "Brand" for g in D["groups"]),
+      "DQ: không còn Page Roborock Flagship Store / nhóm Brand (loại toàn dự án 30/10)", ", ".join(g["group"] for g in D["groups"]))
 exp, gift, promo, demo = angle("Experience / event"), angle("Gift 20/10"), angle("Promo / price"), angle("Demo / feature")
 claim(exp["da_rate"] > max(gift["da_rate"], promo["da_rate"]), "Content: Experience DA rate > Gift và Promo",
       f"exp {pc(exp['da_rate'])} gift {pc(gift['da_rate'])} promo {pc(promo['da_rate'])}")
@@ -66,10 +66,6 @@ claim(reel["views_per_post"] < post["views_per_post"] and reel["da_rate"] > post
 bigmi = rob_acc("BigMi")
 claim(all(a["posts"] <= bigmi["posts"] and a["da"] <= bigmi["da"] for a in D["roborock_by_account"]),
       "Dealer: BigMi nhiều bài Roborock + deep action nhất ('backbone')", f"{bigmi['posts']} bài, {pc(bigmi['da'] / R['da'], 1)} DA")
-cm, dl, br = grp("CM"), grp("Dealer"), grp("Brand")
-claim(br["da_rate"] < min(cm["da_rate"], dl["da_rate"]) and br["views"] / T["views"] > 3 * br["posts"] / T["posts"],
-      "Dealer: Flagship 'buy reach, not conversation'",
-      f"Brand {pc(br['posts'] / T['posts'], 1)} bài / {pc(br['views'] / T['views'], 0)} view, DA {pc(br['da_rate'])} | CM {pc(cm['da_rate'])} | Dealer {pc(dl['da_rate'])}")
 
 # ---- 3. Organic
 other = (T["organic"] - R["organic"]) / (T["views"] - R["views"])
@@ -92,8 +88,8 @@ claim(f25s["da_rate"] > 1.5 * R["da_rate"] and f25s["organic_share"] > R["organi
       "Product: F25 Ultra Steam Gen 2 'conversation starter'", f"DA {pc(f25s['da_rate'])}, organic {pc(f25s['organic_share'], 0)}")
 claim(qe2f["da_rate"] > 2 * R["da_rate"] and qe2f["views_per_post"] < R["views_per_post"],
       "Product: Qrevo Edge 2 Flow under-amplified", f"DA {pc(qe2f['da_rate'])}, {qe2f['views_per_post']:.0f} view/bài")
-claim(all(p["views"] <= f25u["views"] for p in D["products"]) and f25u["organic_share"] < .2 and f25u["da_rate"] < R["da_rate"],
-      "Product: F25 Ultra nhiều view nhất, phần lớn trả phí, DA rate < TB", f"{f25u['views']} view, paid {pc(1 - f25u['organic_share'], 0)}")
+claim(all(p["views"] <= f25u["views"] for p in models) and f25u["organic_share"] < .2 and f25u["da_rate"] < R["da_rate"],
+      "Product: F25 Ultra nhiều view nhất trong các model (không tính khuyến mãi chung), phần lớn trả phí, DA rate < TB", f"{f25u['views']} view, paid {pc(1 - f25u['organic_share'], 0)}")
 claim(q2p["organic_share"] < .2 and gen["da_rate"] < R["da_rate"], "Product: Qrevo 2 Pro paid-heavy, khuyến mãi chung DA rate < TB",
       f"Q2P paid {pc(1 - q2p['organic_share'], 0)}, generic DA {pc(gen['da_rate'])}")
 
@@ -105,8 +101,10 @@ for name in ("AKIA Smart Home", "Trustlinkvn", "Điện Máy Văn Khích", "Đi�
           f"{a.get('posts')} bài, {a.get('roborock_posts')} Roborock")
 claim(acc("Domotek").get("posts", 99) < 5, "Trade: Domotek < 5 bài", str(acc("Domotek").get("posts")))
 claim(not any("giang chi" in a["account"].lower() for a in D["accounts"]), "DQ: Giang Chi không có Page")
-claim(bool(D["quality"]["excluded_pages"]) and acc("Danke").get("pages") == 1,
-      "DQ: đã loại Page trong EXCLUDED_PAGES, Page robot Danke Đà Nẵng còn", json.dumps(D["quality"]["excluded_pages"], ensure_ascii=False))
+ex = [e["page"].lower() for e in D["quality"]["excluded_pages"]]
+claim(any("danke" in e for e in ex) and acc("Danke").get("pages") == 1,   # Page Flagship: đã xóa khỏi DB 30/10 nên có thể không còn trong danh sách
+      "DQ: đã loại DANKE Gia dụng (+ Page Roborock Flagship Store nếu còn bài), Page robot Danke Đà Nẵng còn",
+      json.dumps(D["quality"]["excluded_pages"], ensure_ascii=False))
 
 tpl = next((p for p in D["top_roborock_da_rate"] if p["product"] != "Roborock (generic)" and p["type"] != "Post"), None)
 print("\nXem lại: bài mẫu cho đại lý ->", tpl and f"{tpl['account']} · {tpl['product']} · {tpl['type']} · {tpl['views']} view · {pc(tpl['da_rate'])}")

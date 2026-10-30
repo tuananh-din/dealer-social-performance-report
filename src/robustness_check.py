@@ -6,8 +6,8 @@ from sqlalchemy import select
 
 from app import social  # noqa: F401
 from app.db import SessionLocal
-from app.social import Dealer, Product, SocialPage, SocialPost, product_matcher
-from social_report_rules import account_of, angle_of, classify, excluded
+from app.social import Dealer, Product, SocialPage, SocialPost, deep_action, product_matcher
+from social_report_rules import account_of, angle_of, brand_page, classify, excluded
 
 with SessionLocal() as db:
     pages = {p.id: p for p in db.scalars(select(SocialPage))}
@@ -15,12 +15,12 @@ with SessionLocal() as db:
     match = product_matcher(db.scalars(select(Product)).all())
     rows = [p for p in db.scalars(select(SocialPost)) if p.published_at and not p.duplicate_of
             and date(2026, 10, 7) <= p.published_at.date() <= date(2026, 10, 17)
-            and not excluded(pages[p.page_id].name if p.page_id in pages else "")]
+            and not excluded(pages[p.page_id].name if p.page_id in pages else "") and not brand_page(pages.get(p.page_id))]
 
 
 def rate(ps):
     v = sum(p.views for p in ps)
-    return f"posts {len(ps):4} views {v:9,} vpp {v / len(ps) if ps else 0:6,.0f} da_rate {sum(p.comments + p.shares for p in ps) / v if v else 0:.4f} " \
+    return f"posts {len(ps):4} views {v:9,} vpp {v / len(ps) if ps else 0:6,.0f} da_rate {sum(deep_action(p) for p in ps) / v if v else 0:.4f} " \
            f"org {sum(p.views_organic for p in ps) / v if v else 0:.0%}"
 
 

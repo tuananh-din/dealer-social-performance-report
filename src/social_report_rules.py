@@ -18,12 +18,13 @@ ACCOUNTS = [
     ("Giang Chi", "CM", r"giang chi"),
     ("Cao Thiên Phát", "Dealer", r"cao thien phat"),
     ("Thế Giới Robot Hút Bụi", "Dealer", r"thegioirobothutbui"),
-    ("Roborock Flagship", "Brand", r"roborock flagship"),
 ]
 
-# Page loại khỏi report (tên Page bỏ dấu, khớp nguyên tên). 29/10/2026 người dùng yêu cầu bỏ "DANKE Gia dụng cao cấp":
-# Page gia dụng nhà bếp chiếm hơn nửa view cả mạng nên kéo lệch mọi tỉ lệ. Page robot của Danke ở Đà Nẵng vẫn giữ.
-EXCLUDED_PAGES = {"danke gia dung cao cap"}
+# Page loại khỏi report (tên Page bỏ dấu). 29/10/2026 người dùng yêu cầu bỏ "DANKE Gia dụng cao cấp": Page gia dụng nhà bếp
+# chiếm hơn nửa view cả mạng nên kéo lệch mọi tỉ lệ (Page robot của Danke ở Đà Nẵng vẫn giữ). 30/10/2026: "toàn bộ số liệu của
+# dự án này không cần dữ liệu của 4 Page này" -> 4 Page Roborock Flagship Store (cửa hàng của hãng, không phải đại lý).
+EXCLUDED_PAGES = {"danke gia dung cao cap"}       # khớp nguyên tên
+EXCLUDED_PREFIXES = ("roborock flagship store",)   # khớp đầu tên: Hà Nội, HCMC, Sala Thủ Thiêm, Vũng Tàu
 
 # Ngành hàng: thứ tự = ưu tiên (robot / chăm sóc sàn xét trước). Mẫu tìm trong caption không dấu.
 CATEGORIES = [
@@ -63,7 +64,13 @@ def plain(s: str) -> str:
 
 
 def excluded(page_name: str) -> bool:
-    return " ".join(plain(page_name).split()) in EXCLUDED_PAGES
+    key = " ".join(plain(page_name).split())
+    return key in EXCLUDED_PAGES or key.startswith(EXCLUDED_PREFIXES)
+
+
+def brand_page(page) -> bool:
+    """Page thương hiệu (role brand, vd Roborock Vietnam kéo thẳng từ Meta từ 29/10/2026): không thuộc mạng đại lý."""
+    return getattr(page, "role", "dealer") == "brand"
 
 
 _ACC = [(n, g, re.compile(p)) for n, g, p in ACCOUNTS]
